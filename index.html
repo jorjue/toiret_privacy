@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>トイレの流水音アプリ</title>
+  <link rel="icon" href="toilet_mark.png">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+    integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/styles.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+  <audio id="sound1" src="sound/se_maoudamashii_toire.mp3"></audio>
+  <audio id="sound2" src="sound/taki.mp3"></audio>
+  <audio id="sound3" src="sound/water-flow.mp3"></audio>
+
+  <div class="container">
+    <p class="h2 text-info">トイレ流水音アプリ</p>
+    <p class="text-secondary">
+      下のボタンをタップすると、流水音が流れます。<br>
+      止めるときは、もう一度同じボタンをタップしてください。
+    </p>
+    <div class="content">
+      <button id="flush1" class="btn btn-primary">トイレ流水音</button>
+      <span id="playing1"></span>
+      <p class="text-secondary">再生時間：0:12</p>
+    </div>
+    <div class="content">
+      <button id="flush2" class="btn btn-primary">滝のおトイレ</button>
+      <span id="playing2"></span>
+      <p class="text-secondary">再生時間：1:00</p>
+    </div>
+    <div class="content">
+      <button id="flush3" class="btn btn-primary">せせらぎ</button>
+      <span id="playing3"></span>
+      <p class="text-secondary">再生時間：0:29</p>
+    </div>
+    <img src="pet_nekosuna.png" alt="ネコちゃんもトイレ中">
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>
+        music by <a href="https://maoudamashii.jokersounds.com/archives/se_maoudamashii_toire.html">魔王魂_様_トイレの水が流れる音</a>
+      </p>
+      <p>
+        music by <a href="https://pocket-se.info/archives/1138/">ポケットサウンド_様_【効果音】滝の音</a>
+      </p>
+      <p>
+        music by <a href="https://pocket-se.info/archives/133/">ポケットサウンド_様_【効果音】川が流れるせせらぎ音＃２</a>
+      </p>
+    </div>
+  </footer>
+  <script src="js/script.js" type="text/javascript"></script>
+</body>
+</html>
