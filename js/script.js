@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
   const resetButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
 
-  // フェードアウト（<audio>のvolumeを使う）
   function fadeOut(audio) {
     return new Promise(resolve => {
       if (!audio || audio.paused) return resolve();
@@ -53,10 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // フェードイン
   function fadeIn(audio, volume = 1.0) {
     audio.volume = 0;
-    audio.play().catch(() => {}); // iOS対策
+    audio.play().catch(() => {});
     let v = 0;
     clearInterval(fadeTimer);
     fadeTimer = setInterval(() => {
@@ -69,29 +67,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }, fadeDuration / 20);
   }
 
+  async function stopCurrent() {
+    if (currentIndex >= 0) {
+      await fadeOut(audios[currentIndex]);
+      clearIndicators();
+      resetButtons();
+      currentIndex = -1;
+    }
+  }
+
+  // --- ボタンイベント ---
   buttons.forEach((btn, i) => {
     btn.addEventListener('click', async () => {
       const audio = audios[i];
       const volume = parseFloat(volumes[i].value);
 
-      // 再生中のものがある場合
+      // 同じボタン → 停止
       if (currentIndex === i) {
-        await fadeOut(audio);
-        clearIndicators();
-        resetButtons();
-        currentIndex = -1;
+        await stopCurrent();
         return;
       }
 
-      // 他の音を停止
-      if (currentIndex >= 0) {
-        await fadeOut(audios[currentIndex]);
-      }
-
-      clearIndicators();
-      resetButtons();
-
-      // 新しい音を再生
+      // 他の音を停止してから再生
+      await stopCurrent();
       fadeIn(audio, volume);
       btn.classList.add('btn-playing');
       playingTexts[i].textContent = '　再生中...';
@@ -99,19 +97,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // スライダー変更
+  // --- スライダー音量変更 ---
   volumes.forEach((slider, i) => {
     slider.addEventListener('input', () => {
       audios[i].volume = parseFloat(slider.value);
     });
   });
 
-  // 終了時
+  // --- 終了時 ---
   audios.forEach((a, i) => {
     a.addEventListener('ended', () => {
       clearIndicators();
       resetButtons();
       currentIndex = -1;
+    });
+
+    // 💡 iOS/Android: 音量ボタン押下時や一時停止時に状態同期
+    a.addEventListener('pause', () => {
+      // 再生が意図せず止まった場合、UIを同期
+      if (i === currentIndex && a.currentTime > 0 && !a.ended) {
+        console.log('pause検知: 状態リセット');
+        clearIndicators();
+        resetButtons();
+        currentIndex = -1;
+      }
+    });
+
+    a.addEventListener('volumechange', () => {
+      // ハードウェア音量操作時にもスライダーを同期
+      if (i === currentIndex) {
+        volumes[i].value = a.volume.toFixed(2);
+      }
     });
   });
 });
