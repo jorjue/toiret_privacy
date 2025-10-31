@@ -25,9 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('volume3')
   ];
 
-  const fadeDuration = 400; // ms
+  const fadeDuration = 400;
   let currentIndex = -1;
   let fadeTimer = null;
+  let lastSliderValues = [1, 1, 1]; // スライダーの値を保持
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
   const resetButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
@@ -42,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (v <= 0) {
           audio.pause();
           audio.currentTime = 0;
-          audio.volume = 1;
+          audio.volume = lastSliderValues[currentIndex] || 1; // ←停止後に戻す
           clearInterval(fadeTimer);
           resolve();
         } else {
@@ -76,11 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- ボタンイベント ---
+  // --- ボタン操作 ---
   buttons.forEach((btn, i) => {
     btn.addEventListener('click', async () => {
       const audio = audios[i];
       const volume = parseFloat(volumes[i].value);
+      lastSliderValues[i] = volume;
 
       // 同じボタン → 停止
       if (currentIndex === i) {
@@ -97,11 +101,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- スライダー音量変更 ---
+  // --- スライダー操作 ---
   volumes.forEach((slider, i) => {
-    slider.addEventListener('input', () => {
-      audios[i].volume = parseFloat(slider.value);
-    });
+    if (isMobile) {
+      // モバイルではスライダー無効化（仕様上操作不可）
+      slider.disabled = true;
+      slider.style.opacity = 0.5;
+    } else {
+      slider.addEventListener('input', () => {
+        const val = parseFloat(slider.value);
+        lastSliderValues[i] = val;
+        audios[i].volume = val;
+      });
+    }
   });
 
   // --- 終了時 ---
@@ -112,22 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
       currentIndex = -1;
     });
 
-    // 💡 iOS/Android: 音量ボタン押下時や一時停止時に状態同期
+    // 音量キーなどでpause発火時に状態をリセット
     a.addEventListener('pause', () => {
-      // 再生が意図せず止まった場合、UIを同期
       if (i === currentIndex && a.currentTime > 0 && !a.ended) {
-        console.log('pause検知: 状態リセット');
         clearIndicators();
         resetButtons();
         currentIndex = -1;
       }
     });
-
-    a.addEventListener('volumechange', () => {
-      // ハードウェア音量操作時にもスライダーを同期
-      if (i === currentIndex) {
-        volumes[i].value = a.volume.toFixed(2);
-      }
-    });
   });
 });
+
