@@ -55,3 +55,9 @@ input[type="range"] {
   }
   
 }
+
+.btn-loop-on {
+  background-color: #28a745 !important;
+  color: white !important;
+  border-color: #28a745 !important;
+}

@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('flush3')
   ];
 
+  const loopButtons = [
+    document.getElementById('loop1'),
+    document.getElementById('loop2'),
+    document.getElementById('loop3')
+  ];
+
   const playingTexts = [
     document.getElementById('playing1'),
     document.getElementById('playing2'),
@@ -26,13 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('volume3')
   ];
 
-  const fadeDuration = 0.8; // 秒
+  const fadeDuration = 0.8;
   const audioBuffers = [];
   let currentSource = null;
   let currentGain = null;
   let currentIndex = -1;
+  const loopStates = [false, false, false]; // ループ状態
 
-  // --- 音声ファイルを読み込み・デコード ---
   async function loadSound(index) {
     if (audioBuffers[index]) return audioBuffers[index];
     const response = await fetch(soundFiles[index]);
@@ -42,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return audioBuffer;
   }
 
-  // --- フェードイン ---
   function fadeIn(gainNode, targetVolume) {
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
@@ -50,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     gainNode.gain.linearRampToValueAtTime(targetVolume, now + fadeDuration);
   }
 
-  // --- フェードアウト ---
   function fadeOut(gainNode) {
     return new Promise((resolve) => {
       if (!gainNode) return resolve();
@@ -61,13 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- 停止処理 ---
   async function stopCurrent() {
     if (currentSource) {
       await fadeOut(currentGain);
-      try {
-        currentSource.stop();
-      } catch {}
+      try { currentSource.stop(); } catch {}
       currentSource.disconnect();
       currentGain.disconnect();
       currentSource = null;
@@ -81,9 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
   const resetButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
 
-  // --- 音声再生処理 ---
   async function playSound(index) {
-    await audioContext.resume(); // iOS対策：必ず再開
+    await audioContext.resume();
 
     const buffer = await loadSound(index);
     if (!buffer) return;
@@ -94,9 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     source.buffer = buffer;
     source.connect(gainNode).connect(audioContext.destination);
+    source.loop = loopStates[index]; // ←ここでループ設定
     gainNode.gain.value = 0;
 
-    // 他の音を停止してから再生
     await stopCurrent();
 
     source.start(0);
@@ -107,10 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
     currentIndex = index;
 
     buttons[index].classList.add('btn-playing');
-    playingTexts[index].textContent = '　再生中...';
+    playingTexts[index].textContent = loopStates[index] ? '　再生中（ループ）...' : '　再生中...';
 
     source.onended = () => {
-      if (currentIndex === index) {
+      if (currentIndex === index && !loopStates[index]) {
         clearIndicators();
         resetButtons();
         currentSource = null;
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // --- ボタン操作 ---
+  // --- メインボタン ---
   buttons.forEach((btn, i) => {
     btn.addEventListener('click', async () => {
       if (currentIndex === i) {
@@ -131,11 +131,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- スライダー操作 ---
+  // --- 音量スライダー ---
   volumes.forEach((slider, i) => {
     slider.addEventListener('input', () => {
       if (i === currentIndex && currentGain) {
         currentGain.gain.value = parseFloat(slider.value);
+      }
+    });
+  });
+
+  // --- ループボタン ---
+  loopButtons.forEach((loopBtn, i) => {
+    loopBtn.addEventListener('click', () => {
+      loopStates[i] = !loopStates[i];
+      if (loopStates[i]) {
+        loopBtn.textContent = 'ループON';
+        loopBtn.classList.add('btn-loop-on');
+      } else {
+        loopBtn.textContent = 'ループOFF';
+        loopBtn.classList.remove('btn-loop-on');
+      }
+
+      // 再生中のものがあれば即反映
+      if (i === currentIndex && currentSource) {
+        currentSource.loop = loopStates[i];
+        playingTexts[i].textContent = loopStates[i]
+          ? '　再生中（ループ）...'
+          : '　再生中...';
       }
     });
   });
