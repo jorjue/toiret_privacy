@@ -76,11 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
       currentIndex = -1;
     }
     clearIndicators();
-    resetButtons();
+    resetPlayButtons(); // ← 再生ボタンのみリセット
   }
 
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
-  const resetButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
+  const resetPlayButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
 
   async function playSound(index) {
     await audioContext.resume();
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     source.buffer = buffer;
     source.connect(gainNode).connect(audioContext.destination);
-    source.loop = loopStates[index]; // ←ここでループ設定
+    source.loop = loopStates[index];
     gainNode.gain.value = 0;
 
     await stopCurrent();
@@ -107,17 +107,24 @@ document.addEventListener('DOMContentLoaded', () => {
     currentIndex = index;
 
     buttons[index].classList.add('btn-playing');
-    playingTexts[index].textContent = loopStates[index] ? '　再生中（ループ）...' : '　再生中...';
+    updatePlayingText(index);
 
     source.onended = () => {
       if (currentIndex === index && !loopStates[index]) {
         clearIndicators();
-        resetButtons();
+        resetPlayButtons();
         currentSource = null;
         currentGain = null;
         currentIndex = -1;
       }
     };
+  }
+
+  // 再生中テキスト更新関数
+  function updatePlayingText(i) {
+    playingTexts[i].textContent = loopStates[i]
+      ? '　再生中（ループ）...'
+      : '　再生中...';
   }
 
   // --- メインボタン ---
@@ -152,14 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loopBtn.classList.remove('btn-loop-on');
       }
 
-      // 再生中のものがあれば即反映
+      // 再生中にも即反映
       if (i === currentIndex && currentSource) {
         currentSource.loop = loopStates[i];
-        playingTexts[i].textContent = loopStates[i]
-          ? '　再生中（ループ）...'
-          : '　再生中...';
+        updatePlayingText(i);
       }
     });
   });
 });
+
 

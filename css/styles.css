@@ -61,3 +61,8 @@ input[type="range"] {
   color: white !important;
   border-color: #28a745 !important;
 }
+
+#loop1, #loop2, #loop3 {
+  margin-top: 8px;
+  display: block;
+}
