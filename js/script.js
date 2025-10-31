@@ -1,67 +1,124 @@
-jQuery(function($) {
+"use strict";
 
-  const $sounds = [
-    $('#sound1').get(0),
-    $('#sound2').get(0),
-    $('#sound3').get(0),
+document.addEventListener('DOMContentLoaded', () => {
+  const sounds = [
+    document.getElementById('sound1'),
+    document.getElementById('sound2'),
+    document.getElementById('sound3')
   ];
 
-  const $flushs = [
-    $('#flush1'),
-    $('#flush2'),
-    $('#flush3'),
+  const buttons = [
+    document.getElementById('flush1'),
+    document.getElementById('flush2'),
+    document.getElementById('flush3')
   ];
 
-  $flushs[0].click(function() {
-    if ($sounds[1].paused === false || $sounds[2].paused === false) {
-      return false;
-    }
+  const playingTexts = [
+    document.getElementById('playing1'),
+    document.getElementById('playing2'),
+    document.getElementById('playing3')
+  ];
 
-    if ($sounds[0].paused === true) {
-      $('#playing1').text('　再生中...');
-      $sounds[0].play();
-    } else {
-      $('#playing1').text('');
-      $sounds[0].currentTime = 0;
-      $sounds[0].pause();
+  const volumes = [
+    document.getElementById('volume1'),
+    document.getElementById('volume2'),
+    document.getElementById('volume3')
+  ];
+
+  const fadeDuration = 800; // ms
+
+  const clearIndicators = () => {
+    playingTexts.forEach(t => (t.textContent = ''));
+  };
+
+  const resetButtonStyles = () => {
+    buttons.forEach(btn => btn.classList.remove('btn-playing'));
+  };
+
+  const fadeOut = (audio) => {
+    return new Promise((resolve) => {
+      if (audio.paused) return resolve();
+      const step = 0.05;
+      const interval = fadeDuration / (1 / step);
+      const fade = setInterval(() => {
+        if (audio.volume > step) {
+          audio.volume -= step;
+        } else {
+          audio.volume = 0;
+          audio.pause();
+          audio.currentTime = 0;
+          clearInterval(fade);
+          resolve();
+        }
+      }, interval);
+    });
+  };
+
+  const fadeIn = (audio, targetVolume = 1) => {
+    return new Promise((resolve) => {
+      audio.volume = 0;
+      audio.play();
+      const step = 0.05;
+      const interval = fadeDuration / (1 / step);
+      const fade = setInterval(() => {
+        if (audio.volume < targetVolume - step) {
+          audio.volume += step;
+        } else {
+          audio.volume = targetVolume;
+          clearInterval(fade);
+          resolve();
+        }
+      }, interval);
+    });
+  };
+
+  const fadeOutAll = async () => {
+    for (const s of sounds) {
+      await fadeOut(s);
     }
+    clearIndicators();
+    resetButtonStyles();
+  };
+
+  buttons.forEach((btn, index) => {
+    btn.addEventListener('click', async () => {
+      const sound = sounds[index];
+      const text = playingTexts[index];
+      const targetVolume = parseFloat(volumes[index].value);
+
+      // すでに再生中なら停止
+      if (!sound.paused) {
+        await fadeOut(sound);
+        text.textContent = '';
+        btn.classList.remove('btn-playing');
+        return;
+      }
+
+      // 他の音をフェードアウト＋スタイルリセット
+      await fadeOutAll();
+      clearIndicators();
+      resetButtonStyles();
+
+      // 再生開始
+      text.textContent = '　再生中...';
+      btn.classList.add('btn-playing');
+      await fadeIn(sound, targetVolume);
+    });
   });
-  $flushs[1].click(function() {
-    if ($sounds[0].paused === false || $sounds[2].paused === false) {
-      return false;
-    }
 
-    if ($sounds[1].paused === true) {
-      $('#playing2').text('　再生中...');
-      $sounds[1].play();
-    } else {
-      $('#playing2').text('');
-      $sounds[1].currentTime = 0;
-      $sounds[1].pause();
-    }
-  });
-  $flushs[2].click(function() {
-    if ($sounds[0].paused === false || $sounds[1].paused === false) {
-      return false;
-    }
-
-    if ($sounds[2].paused === true) {
-      $('#playing3').text('　再生中...');
-      $sounds[2].play();
-    } else {
-      $('#playing3').text('');
-      $sounds[2].currentTime = 0;
-      $sounds[2].pause();
-    }
+  // スライダーの音量変更
+  volumes.forEach((slider, i) => {
+    slider.addEventListener('input', () => {
+      sounds[i].volume = parseFloat(slider.value);
+    });
   });
 
-  setInterval(function() {
-    if ($sounds[0].paused === true && $sounds[1].paused === true && $sounds[2].paused === true) {
-      $('#playing1').text('');
-      $('#playing2').text('');
-      $('#playing3').text('');
-    }
-  }, 400);
-
-
+  // 自然終了時にボタン色リセット
+  sounds.forEach((sound, i) => {
+    sound.addEventListener('ended', () => {
+      playingTexts[i].textContent = '';
+      buttons[i].classList.remove('btn-playing');
+    });
+  });
 });
+
