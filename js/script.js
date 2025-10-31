@@ -1,9 +1,14 @@
 "use strict";
 
 document.addEventListener('DOMContentLoaded', () => {
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  let audioContext;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {
+    console.error('Web Audio API未対応:', e);
+    return;
+  }
 
-  // 各サウンドファイルのパス（HTMLと同じ順番で）
   const soundFiles = [
     'sound/se_maoudamashii_toire.mp3',
     'sound/taki.mp3',
@@ -28,67 +33,87 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('volume3')
   ];
 
-  const fadeDuration = 0.8; // 秒
+  const fadeDuration = 0.8;
+  const audioBuffers = [];
   let currentSource = null;
   let currentGain = null;
   let currentIndex = -1;
-  const audioBuffers = [];
 
-  // --- サウンドファイルを事前読み込み ---
-  async function loadSounds() {
-    for (let i = 0; i < soundFiles.length; i++) {
-      const response = await fetch(soundFiles[i]);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      audioBuffers[i] = audioBuffer;
+  const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
+  const resetButtons = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
+
+  // --- Audioを安全に再生できるようにresumeを強制する ---
+  async function ensureAudioUnlocked() {
+    if (audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume();
+        console.log('AudioContext再開');
+      } catch (e) {
+        console.warn('AudioContext再開失敗', e);
+      }
     }
   }
 
-  // --- 再生を開始 ---
-  async function playSound(index) {
-    if (!audioBuffers[index]) return;
+  // --- 音声読み込み ---
+  async function loadAudio(index) {
+    if (audioBuffers[index]) return audioBuffers[index];
 
-    // 再生中の音があればフェードアウトして停止
+    try {
+      const res = await fetch(soundFiles[index]);
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = await audioContext.decodeAudioData(arrayBuffer);
+      audioBuffers[index] = buffer;
+      return buffer;
+    } catch (e) {
+      console.warn('Web Audio fetch失敗、<audio>タグにフォールバックします:', e);
+      const fallback = document.getElementById(`sound${index + 1}`);
+      if (fallback) fallback.play();
+    }
+  }
+
+  async function playSound(index) {
+    await ensureAudioUnlocked();
+
+    // フェードアウトして停止
     if (currentSource) {
-      await fadeOutAndStop(currentGain);
+      await fadeOut(currentGain);
       clearIndicators();
-      resetButtonStyles();
+      resetButtons();
     }
 
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffers[index];
+    const buffer = await loadAudio(index);
+    if (!buffer) return;
 
+    const source = audioContext.createBufferSource();
     const gainNode = audioContext.createGain();
-    const volume = parseFloat(volumes[index].value) || 1.0;
+
+    const targetVol = parseFloat(volumes[index].value) || 1.0;
     gainNode.gain.value = 0;
 
+    source.buffer = buffer;
     source.connect(gainNode).connect(audioContext.destination);
 
-    // 再生開始
     source.start(0);
-    fadeIn(gainNode, volume);
+    fadeIn(gainNode, targetVol);
 
     currentSource = source;
     currentGain = gainNode;
     currentIndex = index;
 
-    // UI更新
     buttons[index].classList.add('btn-playing');
     playingTexts[index].textContent = '　再生中...';
 
-    // 再生終了時にUIリセット
     source.onended = () => {
       if (currentIndex === index) {
         clearIndicators();
-        resetButtonStyles();
+        resetButtons();
         currentSource = null;
         currentGain = null;
       }
     };
   }
 
-  // --- フェードアウトして停止 ---
-  function fadeOutAndStop(gainNode) {
+  async function fadeOut(gainNode) {
     return new Promise((resolve) => {
       if (!gainNode) return resolve();
       const now = audioContext.currentTime;
@@ -98,42 +123,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- フェードイン ---
-  function fadeIn(gainNode, targetVolume) {
+  function fadeIn(gainNode, target) {
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(targetVolume, now + fadeDuration);
+    gainNode.gain.linearRampToValueAtTime(target, now + fadeDuration);
   }
 
-  // --- UI操作 ---
-  const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
-  const resetButtonStyles = () => buttons.forEach(btn => btn.classList.remove('btn-playing'));
-
-  // --- ボタン操作 ---
-  buttons.forEach((btn, index) => {
+  // --- イベント ---
+  buttons.forEach((btn, i) => {
     btn.addEventListener('click', async () => {
-      // iOSの自動再生制限対策：初回クリックでcontextを再開
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
+      await ensureAudioUnlocked();
 
-      if (currentIndex === index) {
-        // 同じ音が再生中 → フェードアウトで停止
-        await fadeOutAndStop(currentGain);
+      if (currentIndex === i) {
+        await fadeOut(currentGain);
         clearIndicators();
-        resetButtonStyles();
+        resetButtons();
         currentSource = null;
         currentGain = null;
         currentIndex = -1;
       } else {
-        // 新しい音を再生
-        await playSound(index);
+        await playSound(i);
       }
     });
   });
 
-  // --- スライダーでリアルタイム音量変更 ---
   volumes.forEach((slider, i) => {
     slider.addEventListener('input', () => {
       if (i === currentIndex && currentGain) {
@@ -141,7 +155,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-
-  // --- 起動時に読み込み開始 ---
-  loadSounds();
 });
