@@ -11,7 +11,7 @@
 - オフライン対応（PWA）
 
 ## 🌐 デモ
-https://ユーザー名.github.io/toiret_privacy/
+https://jorjue.github.io/toiret_privacy/
 
 ## 🛠️ 技術
 - HTML / CSS / JavaScript（Vanilla）
