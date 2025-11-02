@@ -1,8 +1,8 @@
 {
   "name": "トイレのせせらぎ",
   "short_name": "せせらぎ",
-  "description": "静かに流れるトイレの音で安心を。",
-  "start_url": "./index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007bff",
