@@ -21,7 +21,8 @@ input[type="range"] {
 
 /* 再生中ボタンの強調スタイル */
 .btn-playing {
-  background-color: #28a745 !important; /* 緑 */
+  background-color: #28a745 !important;
+  /* 緑 */
   border-color: #28a745 !important;
   color: #fff !important;
   box-shadow: 0 0 12px rgba(40, 167, 69, 0.6);
@@ -36,24 +37,13 @@ input[type="range"] {
 
 /* ボタンの横幅を統一 */
 .btn-lg {
-  width: 200px; /* お好みで調整可 */
+  width: 200px;
+  /* お好みで調整可 */
   text-align: center;
 }
 
-@media (max-width: 768px) {
-
-  .content, img {
-    margin-left: 13%;
-  }
-
-}
-
-@media (min-width: 1024px) {
-
-  .content p {
-    margin-top: 4px;
-  }
-  
+.content p {
+  margin-top: 4px;
 }
 
 .btn-loop-on {
@@ -62,7 +52,24 @@ input[type="range"] {
   border-color: #28a745 !important;
 }
 
-#loop1, #loop2, #loop3 {
-  margin-top: 8px;
-  display: block;
+#volumeAll {
+  margin-bottom: 16px;
+  vertical-align: middle;
+}
+
+#volumeValue {
+  margin-left: 8px;
+  font-weight: bold;
+  color: #007bff;
+  display: inline-block;
+  width: 40px;
+  text-align: left;
+}
+
+.control-section {
+  margin-top: 16px;
+}
+
+.control-section p {
+  margin-bottom: 4px;
 }

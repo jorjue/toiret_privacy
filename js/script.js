@@ -14,30 +14,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('flush3')
   ];
 
-  const loopButtons = [
-    document.getElementById('loop1'),
-    document.getElementById('loop2'),
-    document.getElementById('loop3')
-  ];
-
+  const loopButton = document.getElementById('loopAll');
   const playingTexts = [
     document.getElementById('playing1'),
     document.getElementById('playing2'),
     document.getElementById('playing3')
   ];
-
-  const volumes = [
-    document.getElementById('volume1'),
-    document.getElementById('volume2'),
-    document.getElementById('volume3')
-  ];
+  const volumeSlider = document.getElementById('volumeAll');
+  let volumeValue = document.getElementById('volumeValue');
 
   const fadeDuration = 0.8;
   const audioBuffers = [];
   let currentSource = null;
   let currentGain = null;
   let currentIndex = -1;
-  const loopStates = [false, false, false]; // ループ状態
+  let loopState = false; // ループ状態（共通）
 
   async function loadSound(index) {
     if (audioBuffers[index]) return audioBuffers[index];
@@ -56,19 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fadeOut(gainNode) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (!gainNode) return resolve();
       const now = audioContext.currentTime;
       gainNode.gain.cancelScheduledValues(now);
       gainNode.gain.linearRampToValueAtTime(0, now + fadeDuration);
-      setTimeout(() => resolve(), fadeDuration * 1000);
+      setTimeout(resolve, fadeDuration * 1000);
     });
   }
 
   async function stopCurrent() {
     if (currentSource) {
       await fadeOut(currentGain);
-      try { currentSource.stop(); } catch {}
+      try { currentSource.stop(); } catch { }
       currentSource.disconnect();
       currentGain.disconnect();
       currentSource = null;
@@ -76,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentIndex = -1;
     }
     clearIndicators();
-    resetPlayButtons(); // ← 再生ボタンのみリセット
+    resetPlayButtons();
   }
 
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
@@ -90,11 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const source = audioContext.createBufferSource();
     const gainNode = audioContext.createGain();
-    const volume = parseFloat(volumes[index].value) || 1.0;
+    const volume = parseFloat(volumeSlider.value) || 1.0;
 
     source.buffer = buffer;
     source.connect(gainNode).connect(audioContext.destination);
-    source.loop = loopStates[index];
+    source.loop = loopState; // ループ設定
     gainNode.gain.value = 0;
 
     await stopCurrent();
@@ -110,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePlayingText(index);
 
     source.onended = () => {
-      if (currentIndex === index && !loopStates[index]) {
+      if (currentIndex === index && !loopState) {
         clearIndicators();
         resetPlayButtons();
         currentSource = null;
@@ -120,14 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // 再生中テキスト更新関数
   function updatePlayingText(i) {
-    playingTexts[i].textContent = loopStates[i]
-      ? '　再生中（ループ）...'
-      : '　再生中...';
+    playingTexts[i].textContent = '　再生中...';
   }
 
-  // --- メインボタン ---
+  // --- 再生ボタン ---
   buttons.forEach((btn, i) => {
     btn.addEventListener('click', async () => {
       if (currentIndex === i) {
@@ -139,33 +127,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- 音量スライダー ---
-  volumes.forEach((slider, i) => {
-    slider.addEventListener('input', () => {
-      if (i === currentIndex && currentGain) {
-        currentGain.gain.value = parseFloat(slider.value);
-      }
-    });
+  volumeSlider.addEventListener('input', () => {
+    const val = parseFloat(volumeSlider.value);
+    volumeValue.textContent = val.toFixed(2); // 小数点2桁で表示
+    if (currentGain) {
+      currentGain.gain.value = val;
+    }
   });
+
 
   // --- ループボタン ---
-  loopButtons.forEach((loopBtn, i) => {
-    loopBtn.addEventListener('click', () => {
-      loopStates[i] = !loopStates[i];
-      if (loopStates[i]) {
-        loopBtn.textContent = 'ループON';
-        loopBtn.classList.add('btn-loop-on');
-      } else {
-        loopBtn.textContent = 'ループOFF';
-        loopBtn.classList.remove('btn-loop-on');
-      }
+  loopButton.addEventListener('click', () => {
+    loopState = !loopState;
+    loopButton.textContent = loopState ? 'ループON' : 'ループOFF';
+    loopButton.classList.toggle('btn-loop-on', loopState);
 
-      // 再生中にも即反映
-      if (i === currentIndex && currentSource) {
-        currentSource.loop = loopStates[i];
-        updatePlayingText(i);
-      }
-    });
+    // 再生中に即反映
+    if (currentSource) {
+      currentSource.loop = loopState;
+      if (currentIndex >= 0) updatePlayingText(currentIndex);
+    }
   });
 });
-
-
