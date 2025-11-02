@@ -1,6 +1,12 @@
 "use strict";
 
 document.addEventListener('DOMContentLoaded', () => {
+    function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
   const soundFiles = [
     'sound/se_maoudamashii_toire.mp3',
@@ -23,12 +29,51 @@ document.addEventListener('DOMContentLoaded', () => {
   const volumeSlider = document.getElementById('volumeAll');
   let volumeValue = document.getElementById('volumeValue');
 
+  const durations = [
+    document.getElementById('duration1'),
+    document.getElementById('duration2'),
+    document.getElementById('duration3')
+  ];
+
   const fadeDuration = 0.8;
   const audioBuffers = [];
   let currentSource = null;
   let currentGain = null;
   let currentIndex = -1;
   let loopState = false; // ループ状態（共通）
+  let countdownTimer = null;
+
+  function startCountdown(index, totalSeconds) {
+    clearInterval(countdownTimer);
+
+    let remaining = totalSeconds;
+    durations[index].textContent = `残り時間 : ${formatTime(remaining)}`;
+    countdownTimer = setInterval(() => {
+      if (loopState) {
+        durations[index].textContent = `残り時間 : ∞`;
+        return;
+      }
+
+      remaining -= 1;
+      if (remaining <= 0) {
+        durations[index].textContent = `再生時間 : ${formatTime(totalSeconds)}`;
+        clearInterval(countdownTimer);
+      } else {
+        durations[index].textContent = `残り時間 : ${formatTime(remaining)}`;
+      }
+    }, 1000);
+  }
+
+  function stopCountdown(index) {
+    clearInterval(countdownTimer);
+    if (index >= 0) {
+      const buffer = audioBuffers[index];
+      if (buffer) {
+        const total = Math.floor(buffer.duration);
+        durations[index].textContent = `再生時間 : ${formatTime(total)}`;
+      }
+    }
+  }
 
   async function loadSound(index) {
     if (audioBuffers[index]) return audioBuffers[index];
@@ -68,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     clearIndicators();
     resetPlayButtons();
+    stopCountdown(currentIndex);
   }
 
   const clearIndicators = () => playingTexts.forEach(t => (t.textContent = ''));
@@ -107,8 +153,12 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSource = null;
         currentGain = null;
         currentIndex = -1;
+        stopCountdown(index);
       }
     };
+
+    const totalSeconds = Math.floor(buffer.duration);
+    startCountdown(index, totalSeconds);
   }
 
   function updatePlayingText(i) {
@@ -127,12 +177,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- 音量スライダー ---
+  // ページ読み込み時：保存された音量を読み込む
+  const savedVolume = localStorage.getItem('volumeLevel');
+  if (savedVolume !== null) {
+    const vol = parseFloat(savedVolume);
+    volumeSlider.value = vol;
+    volumeValue.textContent = Math.round(vol * 100) + '%';
+    // 再生開始前でも反映できるようGainNodeには後で適用される
+  }
+
+  // スライダー操作時：音量変更と保存
   volumeSlider.addEventListener('input', () => {
     const val = parseFloat(volumeSlider.value);
-    volumeValue.textContent = val.toFixed(2); // 小数点2桁で表示
+    const percent = Math.round(val * 100);
+    volumeValue.textContent = percent + '%';
+
+    // 現在のGainNodeにも反映
     if (currentGain) {
       currentGain.gain.value = val;
     }
+
+    // ローカルに保存
+    localStorage.setItem('volumeLevel', val.toFixed(2));
   });
 
 

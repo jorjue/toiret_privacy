@@ -62,7 +62,7 @@ input[type="range"] {
   font-weight: bold;
   color: #007bff;
   display: inline-block;
-  width: 40px;
+  width: 45px;
   text-align: left;
 }
 
@@ -72,4 +72,10 @@ input[type="range"] {
 
 .control-section p {
   margin-bottom: 4px;
+}
+
+#duration1,
+#duration2,
+#duration3 {
+  font-family: monospace;
 }
